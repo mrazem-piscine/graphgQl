@@ -1,7 +1,7 @@
 let totalUp = 0;
 let totalDown = 0;
 let xpData = [];
-let currentGraph = 'default';
+let projectTransactions = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
     const token = localStorage.getItem('token');
@@ -33,9 +33,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                         totalUp
                         totalDown
                     }
-                    transaction(where: { type: { _eq: "xp" } }) {
+                    transaction {
                         amount
                         createdAt
+                        object {
+                            id
+                            name
+                            object_type {
+                                type
+                            }
+                            attrs
+                        }
+                        transaction_type {
+                            type
+                        }
                     }
                 }
                 `,
@@ -52,10 +63,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const user = result.data.user[0];
-        const transactions = result.data.transaction;
+        projectTransactions = result.data.transaction || [];
 
         console.log('User Data:', user);
-        console.log('Transaction Data:', transactions);
+        console.log('Project Transactions:', projectTransactions);
 
         // Populate profile data
         document.getElementById('first-name').textContent = user.firstName || 'N/A';
@@ -63,11 +74,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('email').textContent = user.email || 'N/A';
         document.getElementById('xp-earned').textContent = user.totalUp || 0;
         document.getElementById('audit-ratio').textContent = user.auditRatio?.toFixed(2) || 'N/A';
-
-        // Store data in global variables
+        document.getElementById('view-projects').addEventListener('click', () => {
+            console.log('View Projects button clicked!');
+            const detailsContainer = document.getElementById('projects-details');
+            if (detailsContainer.style.display === 'none' || detailsContainer.style.display === '') {
+                detailsContainer.style.display = 'block';
+                renderCollapsibleProjects(detailsContainer);
+            } else {
+                detailsContainer.style.display = 'none';
+            }
+        });
         totalUp = user.totalUp;
         totalDown = user.totalDown;
-        xpData = transactions
+
+        // Prepare XP Data for Graphs
+        xpData = projectTransactions
             .map(t => ({
                 date: new Date(t.createdAt).toLocaleDateString(),
                 xp: t.amount,
@@ -76,7 +97,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         console.log('XP Data for Graphs:', xpData);
 
-        // Render graphs
+        // Render graphs and project transactions
         renderGraphs();
     } catch (error) {
         console.error('Profile Fetch Error:', error.message);
@@ -86,8 +107,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function renderGraphs() {
     const graphsContainer = document.getElementById('graphs');
-
-    // Clear any existing content
     graphsContainer.innerHTML = '<h2>Graphs</h2>';
 
     if (!xpData || xpData.length === 0) {
@@ -95,11 +114,11 @@ function renderGraphs() {
         return;
     }
 
-    // Render Default Graphs
     renderDefaultGraphs(graphsContainer, totalUp, totalDown, xpData);
 }
 
 function renderDefaultGraphs(container, totalUp, totalDown, xpData) {
+    // Existing default graph logic
     const totalWidth = 400;
     const barHeight = 40;
     const scaleFactor = totalWidth / Math.max(totalUp, totalDown || 1);
@@ -116,11 +135,8 @@ function renderDefaultGraphs(container, totalUp, totalDown, xpData) {
                 <animate attributeName="width" from="0" to="${totalDown * scaleFactor}" dur="1s" fill="freeze" />
             </rect>
             <text x="${100 + totalDown * scaleFactor + 10}" y="145" fill="black" font-size="14px">XP Deducted (${totalDown})</text>
-            <text x="10" y="75" fill="black" font-size="16px" font-weight="bold">Earned</text>
-            <text x="10" y="145" fill="black" font-size="16px" font-weight="bold">Deducted</text>
         </svg>
     `;
-
     const graphWidth = 500;
     const graphHeight = 300;
     const maxXP = Math.max(...xpData.map(d => d.xp));
@@ -155,4 +171,47 @@ function renderDefaultGraphs(container, totalUp, totalDown, xpData) {
         </path>
     </svg>
 `;
+}
+
+function renderCollapsibleProjects(container) {
+    container.innerHTML = '<h3>Project Transactions</h3>';
+
+    if (projectTransactions.length === 0) {
+        container.innerHTML += '<p>No project transactions found.</p>';
+        return;
+    }
+
+    projectTransactions.forEach((t, index) => {
+        const projectId = `project-${index}`;
+        const attrs = t.object.attrs || {};
+
+        container.innerHTML += `
+            <div style="border: 1px solid #ddd; margin: 10px 0;">
+                <button style="width: 100%; text-align: left;" onclick="toggleProject('${projectId}')">
+                    <strong>${t.object.name || 'Unknown'}</strong>
+                </button>
+                <div id="${projectId}" style="display: none; padding: 10px;">
+                    <p><strong>Object Type:</strong> ${t.object.object_type?.type || 'N/A'}</p>
+                    <p><strong>Transaction Type:</strong> ${t.transaction_type?.type || 'N/A'}</p>
+                    <p><strong>XP Earned/Deducted:</strong> ${t.amount}</p>
+                    <p><strong>Created At:</strong> ${new Date(t.createdAt).toLocaleString()}</p>
+                    <p><strong>Attributes:</strong></p>
+                    <ul>
+                        <li><strong>Group Max:</strong> ${attrs.groupMax || 'N/A'}</li>
+                        <li><strong>Group Min:</strong> ${attrs.groupMin || 'N/A'}</li>
+                        <li><strong>Language:</strong> ${attrs.language || 'N/A'}</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+    });
+}
+
+function toggleProject(projectId) {
+    const projectElement = document.getElementById(projectId);
+    if (projectElement.style.display === 'none') {
+        projectElement.style.display = 'block';
+    } else {
+        projectElement.style.display = 'none';
+    }
 }

@@ -57,24 +57,31 @@ app.get('/profile', async (req, res) => {
                 query: `
                 query {
                     user {
-                        id
                         firstName
                         lastName
                         email
-                        login
-                        campus
-                        auditRatio
                         totalUp
                         totalDown
-                        totalUpBonus
-                        createdAt
-                        updatedAt
+                        auditRatio
                     }
-                    transaction(where: { type: { _eq: "xp" } }) {
-                        amount
-                        createdAt
+                    projectStats: transaction(where: { type: { _eq: "project" } }) {
                         project
                         result
+                        xp
+                        attempts
+                    }
+                    piscineStats: transaction(where: { type: { _eq: "piscine" } }) {
+                        exercise
+                        result
+                        attempts
+                    }
+                    grades {
+                        subject
+                        grade
+                    }
+                    skills {
+                        name
+                        level
                     }
                 }
                 `,
@@ -88,7 +95,10 @@ app.get('/profile', async (req, res) => {
         }
 
         const user = result.data.user[0];
-        const transactions = result.data.transaction || [];
+        const projectStats = result.data.projectStats || [];
+        const piscineStats = result.data.piscineStats || [];
+        const grades = result.data.grades || [];
+        const skills = result.data.skills || [];
         res.json({ ...user, transactions });
     } catch (error) {
         console.error('Error in /profile Route:', error.message);
