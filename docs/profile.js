@@ -85,32 +85,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function renderGraphs() {
-  const graphsContainer = document.getElementById('graphs');
+    const graphsContainer = document.getElementById('graphs');
 
-  // Clear any existing content
-  graphsContainer.innerHTML = '<h2>Graphs</h2>';
+    // Clear any existing content
+    graphsContainer.innerHTML = '<h2>Graphs</h2>';
 
-  if (!xpData || xpData.length === 0) {
-      graphsContainer.innerHTML += '<p>No data available for graphs.</p>';
-      return;
-  }
+    if (!xpData || xpData.length === 0) {
+        graphsContainer.innerHTML += '<p>No data available for graphs.</p>';
+        return;
+    }
 
-  if (currentGraph === 'default') {
-      // Render Default Graphs
-      renderDefaultGraphs(graphsContainer, totalUp, totalDown, xpData);
-  } else if (currentGraph === 'alternate') {
-      // Render Alternate Graphs
-      renderAlternateGraphs(graphsContainer, xpData);
-  }
-
-  // Add interactive buttons
-  graphsContainer.innerHTML += `
-      <div style="margin-top: 20px;">
-          <button onclick="switchGraph()">Switch Graph</button>
-      </div>
-  `;
+    // Render Default Graphs
+    renderDefaultGraphs(graphsContainer, totalUp, totalDown, xpData);
 }
-
 
 function renderDefaultGraphs(container, totalUp, totalDown, xpData) {
     const totalWidth = 400;
@@ -119,7 +106,7 @@ function renderDefaultGraphs(container, totalUp, totalDown, xpData) {
 
     container.innerHTML += `
         <!-- Bar Chart: XP Earned vs Deducted -->
-        <svg width="${totalWidth + 150}" height="200" style="border: 1px solid lightgray;">
+        <svg width="${totalWidth + 500}" height="200" style="border: 1px solid lightgray;">
             <text x="10" y="20" font-size="16px" font-weight="bold">XP Earned vs Deducted</text>
             <rect x="100" y="50" width="0" height="${barHeight}" fill="green" class="hover-bar">
                 <animate attributeName="width" from="0" to="${totalUp * scaleFactor}" dur="1s" fill="freeze" />
@@ -148,106 +135,24 @@ function renderDefaultGraphs(container, totalUp, totalDown, xpData) {
     });
 
     container.innerHTML += `
-        <!-- Line Graph: XP Progression -->
-        <svg width="${graphWidth + 100}" height="${graphHeight + 150}" style="border: 1px solid lightgray;">
-            <text x="10" y="20" font-size="16px" font-weight="bold">XP Progression Over Time</text>
-            <line x1="50" y1="${graphHeight + 50}" x2="${graphWidth + 50}" y2="${graphHeight + 50}" stroke="black">
-                <animate attributeName="x2" from="50" to="${graphWidth + 50}" dur="1s" fill="freeze" />
-            </line>
-            <line x1="50" y1="${graphHeight + 50}" x2="50" y2="50" stroke="black">
-                <animate attributeName="y2" from="${graphHeight + 50}" to="50" dur="1s" fill="freeze" />
-            </line>
-            <path d="${pathD}" fill="none" stroke="blue" stroke-width="2" stroke-dasharray="0">
-                <animate attributeName="stroke-dasharray" from="0" to="${graphWidth + graphHeight}" dur="2s" fill="freeze" />
-            </path>
-            ${xpData
-                .map(
-                    (point, index) => {
-                        const x = 50 + index * xScale;
-                        const y = graphHeight + 50 - point.xp * yScale;
-                        return `
-                            <circle cx="${x}" cy="${y}" r="0" fill="blue" class="hover-point">
-                                <animate attributeName="r" from="0" to="5" dur="0.5s" begin="${index * 0.1}s" fill="freeze" />
-                            </circle>
-                            <title>${point.date}: ${point.xp} XP</title>
-                        `;
-                    }
-                )
-                .join('')}
-        </svg>
-    `;
+    <!-- Line Graph: XP Progression -->
+    <svg width="${graphWidth + 100}" height="${graphHeight + 150}" style="border: 1px solid lightgray; font-family: Arial, sans-serif;">
+        <defs>
+            <!-- Gradient for the line -->
+            <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#6a5acd" />
+                <stop offset="100%" stop-color="#48d1cc" />
+            </linearGradient>
+        </defs>
+        <!-- Title -->
+        <text x="${(graphWidth + 100) / 2}" y="20" font-size="16px" font-weight="bold" text-anchor="middle">XP Progression Over Time</text>
+        <!-- Axes -->
+        <line x1="50" y1="${graphHeight + 50}" x2="${graphWidth + 50}" y2="${graphHeight + 50}" stroke="black" />
+        <line x1="50" y1="${graphHeight + 50}" x2="50" y2="50" stroke="black" />
+        <!-- Path -->
+        <path d="${pathD}" fill="none" stroke="url(#lineGradient)" stroke-width="3">
+            <animate attributeName="stroke-dasharray" from="0" to="${graphWidth + graphHeight}" dur="2s" fill="freeze" />
+        </path>
+    </svg>
+`;
 }
-
-function renderAlternateGraphs(container, xpData) {
-  // Example: Grouped Bar Chart for XP Earned vs. Deducted Over Time
-  const graphWidth = 500;
-  const graphHeight = 300;
-  const barWidth = 20;
-  const maxXP = Math.max(...xpData.map(d => d.xp)) * 1.1; // Add a buffer for visualization
-  const xScale = 50; // Horizontal spacing between groups
-
-  container.innerHTML += `
-      <svg width="${xpData.length * xScale + 100}" height="${graphHeight + 100}" style="border: 1px solid lightgray;">
-          <text x="10" y="20" font-size="16px" font-weight="bold">XP Earned and Deducted Over Time</text>
-
-          <!-- Axes -->
-          <line x1="50" y1="${graphHeight + 50}" x2="${xpData.length * xScale + 50}" y2="${graphHeight + 50}" stroke="black" />
-          <line x1="50" y1="${graphHeight + 50}" x2="50" y2="50" stroke="black" />
-
-          <!-- Bars -->
-          ${xpData
-              .map((point, index) => {
-                  const xGroup = 50 + index * xScale; // Start of the group
-                  const earnedBarHeight = (point.xp / maxXP) * graphHeight;
-                  const deductedBarHeight = Math.random() * earnedBarHeight * 0.5; // Mock deducted data for now
-                  const earnedBarY = graphHeight + 50 - earnedBarHeight;
-                  const deductedBarY = graphHeight + 50 - deductedBarHeight;
-
-                  return `
-                      <!-- Earned Bar -->
-                      <rect x="${xGroup}" y="${earnedBarY}" width="${barWidth}" height="${earnedBarHeight}" fill="green">
-                          <title>${point.date}: XP Earned - ${point.xp}</title>
-                      </rect>
-
-                      <!-- Deducted Bar -->
-                      <rect x="${xGroup + barWidth + 5}" y="${deductedBarY}" width="${barWidth}" height="${deductedBarHeight}" fill="red">
-                          <title>${point.date}: XP Deducted - ${deductedBarHeight.toFixed(0)}</title>
-                      </rect>
-
-                      <!-- Labels -->
-                      <text x="${xGroup + 5}" y="${graphHeight + 75}" font-size="10px" text-anchor="middle">${point.date}</text>
-                  `;
-              })
-              .join('')}
-      </svg>
-  `;
-}
-
-function filterData(range) {
-  let filteredXPData;
-  const now = new Date();
-
-  if (range === 'last7') {
-      filteredXPData = xpData.filter(d => new Date(d.date) >= new Date(now.setDate(now.getDate() - 7)));
-  } else if (range === 'last30') {
-      filteredXPData = xpData.filter(d => new Date(d.date) >= new Date(now.setDate(now.getDate() - 30)));
-  } else {
-      filteredXPData = xpData; // Default: All data
-  }
-
-  console.log(`Filtered Data (${range}):`, filteredXPData);
-  xpData = filteredXPData; // Update global xpData
-  renderGraphs(); // Re-render graphs with filtered data
-}
-
-function switchGraph() {
-  currentGraph = currentGraph === 'default' ? 'alternate' : 'default';
-  renderGraphs(); // Re-render with the toggled graph type
-}
-
-function isTokenExpired(token) {
-  const [, payload] = token.split('.');
-  const { exp } = JSON.parse(atob(payload));
-  return Date.now() >= exp * 1000;
-}
-
