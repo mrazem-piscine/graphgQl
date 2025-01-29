@@ -1,25 +1,27 @@
+
 let totalUp = 0;
 let totalDown = 0;
 let xpData = [];
 let projectTransactions = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const token = localStorage.getItem('token');
+    let token = localStorage.getItem('token');
 
     if (!token) {
         alert('Unauthorized: Please log in.');
         localStorage.removeItem('token');
-        window.location.href = '/';
+        window.location.href = 'index.html';
         return;
     }
 
+    token = token.replace(/^"|"$/g, ''); 
     console.log('Token from localStorage:', token);
 
     try {
         const response = await fetch('https://adam-jerusalem.nd.edu/api/graphql-engine/v1/graphql', {
             method: 'POST',
             headers: {
-                Authorization: `Bearer ${token}`,
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -36,17 +38,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     transaction {
                         amount
                         createdAt
-                        object {
-                            id
-                            name
-                            object_type {
-                                type
-                            }
-                            attrs
-                        }
-                        transaction_type {
-                            type
-                        }
+                      
+                    
                     }
                 }
                 `,
@@ -57,8 +50,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('GraphQL Response:', result);
 
         if (!response.ok || result.errors) {
-            console.error('GraphQL Errors:', result.errors || 'Unknown error');
-            alert('Error fetching profile data.');
+            console.error('GraphQL Errors:', JSON.stringify(result.errors, null, 2));
+            alert('GraphQL Error: ' + JSON.stringify(result.errors, null, 2));
             return;
         }
 
@@ -68,22 +61,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('User Data:', user);
         console.log('Project Transactions:', projectTransactions);
 
-        // Populate profile data
-        document.getElementById('first-name').textContent = user.firstName || 'N/A';
-        document.getElementById('last-name').textContent = user.lastName || 'N/A';
-        document.getElementById('email').textContent = user.email || 'N/A';
-        document.getElementById('xp-earned').textContent = user.totalUp || 0;
-        document.getElementById('audit-ratio').textContent = user.auditRatio?.toFixed(2) || 'N/A';
-        document.getElementById('view-projects').addEventListener('click', () => {
-            console.log('View Projects button clicked!');
-            const detailsContainer = document.getElementById('projects-details');
-            if (detailsContainer.style.display === 'none' || detailsContainer.style.display === '') {
-                detailsContainer.style.display = 'block';
-                renderCollapsibleProjects(detailsContainer);
-            } else {
-                detailsContainer.style.display = 'none';
-            }
-        });
+        // Update profile details
+        updateElementText('first-name', user.firstName || 'N/A');
+        updateElementText('last-name', user.lastName || 'N/A');
+        updateElementText('email', user.email || 'N/A');
+        updateElementText('xp-earned', user.totalUp || 0);
+        updateElementText('audit-ratio', user.auditRatio?.toFixed(2) || 'N/A');
+
         totalUp = user.totalUp;
         totalDown = user.totalDown;
 
@@ -97,13 +81,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         console.log('XP Data for Graphs:', xpData);
 
-        // Render graphs and project transactions
-        renderGraphs();
+        // Render graphs only if the section exists
+        if (document.getElementById('graphs')) {
+            renderGraphs();
+        } else {
+            console.warn('Graphs section missing in profile.html');
+        }
     } catch (error) {
         console.error('Profile Fetch Error:', error.message);
-        alert('Error fetching profile data.');
+        alert('Error fetching profile data: ' + error.message);
     }
 });
+
+// Helper function to update text only if the element exists
+function updateElementText(id, value) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.textContent = value;
+    } else {
+        console.warn(`Element with id '${id}' not found.`);
+    }
+}
+
+
 
 function renderGraphs() {
     const graphsContainer = document.getElementById('graphs');
@@ -173,45 +173,4 @@ function renderDefaultGraphs(container, totalUp, totalDown, xpData) {
 `;
 }
 
-function renderCollapsibleProjects(container) {
-    container.innerHTML = '<h3>Project Transactions</h3>';
 
-    if (projectTransactions.length === 0) {
-        container.innerHTML += '<p>No project transactions found.</p>';
-        return;
-    }
-
-    projectTransactions.forEach((t, index) => {
-        const projectId = `project-${index}`;
-        const attrs = t.object.attrs || {};
-
-        container.innerHTML += `
-            <div style="border: 1px solid #ddd; margin: 10px 0;">
-                <button style="width: 100%; text-align: left;" onclick="toggleProject('${projectId}')">
-                    <strong>${t.object.name || 'Unknown'}</strong>
-                </button>
-                <div id="${projectId}" style="display: none; padding: 10px;">
-                    <p><strong>Object Type:</strong> ${t.object.object_type?.type || 'N/A'}</p>
-                    <p><strong>Transaction Type:</strong> ${t.transaction_type?.type || 'N/A'}</p>
-                    <p><strong>XP Earned/Deducted:</strong> ${t.amount}</p>
-                    <p><strong>Created At:</strong> ${new Date(t.createdAt).toLocaleString()}</p>
-                    <p><strong>Attributes:</strong></p>
-                    <ul>
-                        <li><strong>Group Max:</strong> ${attrs.groupMax || 'N/A'}</li>
-                        <li><strong>Group Min:</strong> ${attrs.groupMin || 'N/A'}</li>
-                        <li><strong>Language:</strong> ${attrs.language || 'N/A'}</li>
-                    </ul>
-                </div>
-            </div>
-        `;
-    });
-}
-
-function toggleProject(projectId) {
-    const projectElement = document.getElementById(projectId);
-    if (projectElement.style.display === 'none') {
-        projectElement.style.display = 'block';
-    } else {
-        projectElement.style.display = 'none';
-    }
-}

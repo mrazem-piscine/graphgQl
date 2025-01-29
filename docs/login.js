@@ -7,28 +7,26 @@ document.getElementById('login-form').addEventListener('submit', async function 
     console.log('Login Request:', { username, password });
   
     try {
-        const response = await fetch('/login', {
+        const response = await fetch('https://adam-jerusalem.nd.edu/api/auth/signin', { 
             method: 'POST',
             headers: {
+                Authorization: 'Basic ' + btoa(`${username}:${password}`),
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ username, password }),
         });
-  
-        const data = await response.json();
-  
+
+        const token = await response.text();
+
         if (response.ok) {
-            const token = data.token.replace(/^"|"$/g, '');
             localStorage.setItem('token', token);
             console.log('JWT stored:', token);
-            window.location.href = '/profile.html';
+            window.location.href = 'profile.html'; // Redirect to profile page
         } else {
-            console.error('Login Error:', data.error);
-            document.getElementById('login-message').textContent = `Error: ${data.error}`;
+            console.error('Login Error:', token);
+            document.getElementById('login-message').textContent = `Error: ${token}`;
         }
     } catch (error) {
         console.error('Login Failed:', error.message);
         document.getElementById('login-message').textContent = `Error: ${error.message}`;
     }
-  });
-  
+});
