@@ -108,6 +108,11 @@ function updateElementText(id, value) {
     }
 }
 
+
+
+
+
+
 function renderGraphs() {
     const graphsContainer = document.getElementById('graphs');
     graphsContainer.innerHTML = '<h2>Graphs</h2>';
@@ -125,6 +130,13 @@ function renderGraphs() {
         renderTransactionTypeGraph(transactionData);
     }
 }
+
+
+
+
+
+
+
 function renderDefaultGraphs(container, totalUp, totalDown, xpData) {
 
     
@@ -159,70 +171,90 @@ function renderDefaultGraphs(container, totalUp, totalDown, xpData) {
         
         container.innerHTML += `
         <!-- Pie Chart: XP Earned vs XP Deducted -->
-        <svg width="300" height="150" style="border: 1px solid lightgray;">
-        <text x="150" y="20" font-size="16px" font-weight="bold" text-anchor="middle">XP Distribution</text>
-        <path d="${earnedArc}" fill="green">
-        <animate attributeName="opacity" from="0" to="1" dur="1s" fill="freeze" />
-        </path>
-        <path d="${deductedArc}" fill="red">
-        <animate attributeName="opacity" from="0" to="1" dur="1s" fill="freeze" />
-        </path>
-        <circle cx="150" cy="150" r="50" fill="white" />
-        <text x="120" y="155" font-size="14px" font-weight="bold">XP Earned</text>
-        <text x="120" y="175" font-size="14px" font-weight="bold" fill="red">XP Deducted</text>
+        <svg width="400" height="250" style="border: 1px solid lightgray;">
+            
+            <!-- XP Earned Arc (Green) -->
+            <path d="${earnedArc}" fill="green">
+                <animate attributeName="opacity" from="0" to="1" dur="1s" fill="freeze" />
+            </path>
+            
+            <!-- XP Deducted Arc (Red) -->
+            <path d="${deductedArc}" fill="red">s
+                <animate attributeName="opacity" from="0" to="1" dur="1s" fill="freeze" />
+            </path>
+            
+            <!-- White Circle in the Middle -->
+            <circle cx="150" cy="150" r="50" fill="white" />
+            
+            <!-- Labels and Numbers -->
+            <text x="270" y="150" font-size="14px" font-weight="bold" fill="green">XP Earned: ${totalUp}</text>
+            <text x="10" y="150" font-size="14px" font-weight="bold" fill="red">XP Deducted: ${totalDown}</text>
         </svg>
-        `;
-    }
-    
-        const graphWidth = 500;
-        const graphHeight = 300;
-        const maxXP = Math.max(...xpData.map(d => d.xp), 1);
-        const xScale = graphWidth / (xpData.length - 1);
-        const yScale = graphHeight / maxXP;
-    
-        let pathD = '';
-        xpData.forEach((point, index) => {
-            const x = index * xScale + 50; 
-            const y = graphHeight + 50 - point.xp * yScale; 
-            pathD += `${index === 0 ? 'M' : 'L'} ${x},${y} `;
-        });
-    
-        container.innerHTML += `
-        <!-- Line Graph: XP Progression -->
-        <svg width="${graphWidth + 100}" height="${graphHeight + 150}" style="border: 1px solid lightgray; font-family: Arial, sans-serif;">
-            <defs>
-                <!-- Gradient for the line -->
-                <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#6a5acd" />
-                    <stop offset="100%" stop-color="#48d1cc" />
-                </linearGradient>
-            </defs>
-            <!-- Title -->
-            <text x="${(graphWidth + 100) / 2}" y="20" font-size="16px" font-weight="bold" text-anchor="middle">XP Progression Over Time</text>
-            <!-- Axes -->
-            <line x1="50" y1="${graphHeight + 50}" x2="${graphWidth + 50}" y2="${graphHeight + 50}" stroke="black" />
-            <line x1="50" y1="${graphHeight + 50}" x2="50" y2="50" stroke="black" />
-            <!-- Path -->
-            <path id="xpPath" d="${pathD}" fill="none" stroke="url(#lineGradient)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />
-        </svg>
-        `;
-    
-        document.addEventListener("DOMContentLoaded", () => {
-            const path = document.getElementById("xpPath");
-            const totalLength = path.getTotalLength();
-    
-            path.style.strokeDasharray = totalLength;
-            path.style.strokeDashoffset = totalLength;
-    
-            path.animate([
-                { strokeDashoffset: totalLength },
-                { strokeDashoffset: "0" }
-            ], {
-                duration: 2000,
-                fill: "forwards"
-            });
-        });
+    `;
 }
+
+
+const graphWidth = 500;
+const graphHeight = 300;
+const maxXP = Math.max(...xpData.map(d => d.xp), 1);
+const xScale = graphWidth / (xpData.length - 1);
+const yScale = graphHeight / maxXP;
+
+let pathD = '';
+xpData.forEach((point, index) => {
+    const x = index * xScale + 50;
+    const y = graphHeight + 50 - point.xp * yScale;
+    pathD += `${index === 0 ? 'M' : 'L'} ${x},${y} `;
+});
+
+// Extract unique months and years
+let uniqueMonths = xpData.map(d => {
+    let date = new Date(d.date);
+    return {
+        month: date.toLocaleString('default', { month: 'short' }), // Ex: "Jan"
+        year: date.getFullYear(), // Ex: "2024"
+        date: date
+    };
+});
+
+// Remove duplicates and sort by date
+uniqueMonths = uniqueMonths.filter((v, i, a) => a.findIndex(t => t.month === v.month && t.year === v.year) === i);
+uniqueMonths.sort((a, b) => a.date - b.date);
+
+// Select four evenly spaced months
+let displayedMonths = [];
+if (uniqueMonths.length > 4) {
+    let step = Math.floor(uniqueMonths.length / 4);
+    for (let i = 0; i < 4; i++) {
+        displayedMonths.push(uniqueMonths[i * step]);
+    }
+} else {
+    displayedMonths = uniqueMonths; // If fewer than 4, display all
+}
+
+// Render graph
+container.innerHTML += `
+<!-- Line Graph: XP Progression -->
+<svg width="${graphWidth + 100}" height="${graphHeight + 150}" style="border: 1px solid lightgray; font-family: Arial, sans-serif;">
+    <defs>
+        <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#6a5acd" />
+            <stop offset="100%" stop-color="#48d1cc" />
+        </linearGradient>
+    </defs>
+    <text x="${(graphWidth + 100) / 2}" y="20" font-size="16px" font-weight="bold" text-anchor="middle">XP Progression Over Time</text>
+    <line x1="50" y1="${graphHeight + 50}" x2="${graphWidth + 50}" y2="${graphHeight + 50}" stroke="black" />
+    <line x1="50" y1="${graphHeight + 50}" x2="50" y2="50" stroke="black" />
+    <path id="xpPath" d="${pathD}" fill="none" stroke="url(#lineGradient)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />
+    ${displayedMonths.map((m, i) => {
+        let xPos = (i * (graphWidth / 3)) + 50; // Spread across the graph
+        return `<text x="${xPos}" y="${graphHeight + 75}" font-size="12px" text-anchor="middle">${m.month} ${m.year}</text>`;
+    }).join('')}
+</svg>
+`;
+
+}
+
 
 function renderTransactionTypeGraph(transactions) {
     if (!transactions || transactions.length === 0) return;
